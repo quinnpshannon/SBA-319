@@ -1,0 +1,34 @@
+:root {
+    --navBar: #F4538A;
+    --complete: #FAA300;
+    --body: #F5DD61;
+    --button: #59D5E0;
+    /* --navBar: #0384fc; */
+    --navhl: #9003fc;
+    --back: #03fcd3;
+    --card: #03e3fc;
+    --top: #62fc03;
+    /* --complete: #fc2c03; */
+    --Geo: #fcb603;
+    font-family: "Roboto", sans-serif;
+}
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--body);
+}
+nav ul{
+    display:flex;
+    justify-content: space-between;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--navBar);
+}
+nav ul li{
+    background-color: var(--complete);
+    margin: 5px;
+    padding: 5px;
+    border-radius: 5px;
+}
