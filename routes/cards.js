@@ -12,26 +12,56 @@ import express from 'express';
 import db from '../db/conn.js'
 import { ObjectId } from 'mongodb';
 
+const scryfallApi = 'https://api.scryfall.com/cards'// - /setcode/cn
 const router = express.Router();
 
-router.get('/', (req, res) =>{
-    res.send('Forbidden: Not a chance buddy. Data is Secretive!').status(503);
+router.get('/', async (req, res) =>{
+        res.send('Please supply a database ID after /cards/').status(200);
+});
+
+router.get('/:id', async (req, res) =>{
+    try {
+        const collection = await db.collection("cards");
+        const query = {_id: new ObjectId(req.params.id)};
+        const result = await collection.findOne(query);
+        res.send(result).status(200);
+    }
+    catch(e){
+        res.send("Error: Incorrect ObjectId").status(400);
+        console.log(e);
+        // console.log(e.cause);
+    }
 });
 
 router.post('/', async (req, res) =>{
     try {
-        const collection = await db.collection("users");
-        const newDocument = req.body;
-        if(newDocument.email && newDocument.password && newDocument.username) {
-            const result = await collection.insertOne(newDocument);
-            res.send(result).status(204);
+        const collection = await db.collection("cards");
+        if(req.body.set && req.body.cn) {
+            //Thalia is the Guardian of Thraben.
+            //In this case, she's guarding the Database from bad / extra data
+            const thalia = {set: req.body.set, cn: req.body.cn}
+            thalia.set = thalia.set.toLowerCase();
+            const gatekeeper = await collection.findOne(thalia);
+            if(await gatekeeper != null) return res.send('Card already in the Database!').status(200);
+            else {
+            // Haldan is the master of Pako, Arcane Retriever.
+            // Haldan is telling Pako what to 'Fetch'
+                const haldan = scryfallApi+'/'+thalia.set+'/'+thalia.cn;
+            // Pako is a dog. He is good at fetching.
+                const pako = await fetch(haldan.toLowerCase());
+                const sfData = await pako.json();
+                thalia.name = sfData.name;
+                thalia.images = sfData.image_uris;
+                const result = await collection.insertOne(thalia);
+                res.send(result).status(204);
+            }
         } else{
             throw new Error('Incomplete Information',{ cause: 400});
         }
     }
     catch(e){
-        console.log(e);
-        // console.log(e.cause);
+        if(e.cause === 400) res.send("Incomplete Information!").status(400);
+        else res.send('Something went wrong...').status(500);
     }
 });
 

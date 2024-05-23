@@ -58,16 +58,24 @@ router.post('/', async (req, res) =>{
     }
 });
 
-router.delete('/', async (req, res) =>{
+router.delete('/:id', async (req, res) =>{
     try {
-        const collection = await db.collection("users");
+        const auth = await db.collection("users");
         const newDocument = req.body;
-        if(newDocument.password && newDocument.username) {
-            const found = await collection.findOne(newDocument);
-            console.log(found);
-            if(found)
-            // const result = await collection.deleteOne(newDocument);
-            res.send(result).status(204);
+        if(newDocument.username && newDocument.password){
+            const valid = await auth.findOne({username: newDocument.username, password: newDocument.password})
+            console.log(await valid);
+            const collection = await db.collection("decks");
+            if(await valid) {
+                const found = await collection.findOne({_id: new ObjectId(req.params.id)});
+                if(await found){
+                    const result = await collection.deleteOne({_id: new ObjectId(req.params.id)});
+                    res.send(result).status(204);
+                } else res.send('No Deck to delete!').status(400);
+                
+            } else {
+                res.send('Access Denied').status(204);
+            }
         } else {
             throw new Error('Incomplete Information',{ cause: 400});
         }
