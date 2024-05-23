@@ -36,6 +36,22 @@ router.get('/set/:set', async (req, res) =>{
     }
 });
 
+router.get('/:id', async (req, res) =>{
+    // display the specific decklist
+    try {
+        const collection = await db.collection("decks");
+        const found = await collection.findOne({_id: new ObjectId(req.params.id)});
+        const result = await found;
+        if(result) res.json(result).status(200);
+        else throw new Error(`No Deck with ID ${req.params.id}`,{ cause: 400});
+    }
+    catch(e){
+        console.log(e);
+        const result = `<p> ${e}</p>`
+        res.send(result).status(e.cause);
+    }
+});
+
 router.post('/', async (req, res) =>{
     try {
         const collection = await db.collection("decks");
@@ -54,7 +70,8 @@ router.post('/', async (req, res) =>{
     }
     catch(e){
         console.log(e);
-        // console.log(e.cause);
+        const result = `<p> ${e}</p>`
+        res.send(result).status(e.cause);
     }
 });
 
@@ -64,7 +81,6 @@ router.delete('/:id', async (req, res) =>{
         const newDocument = req.body;
         if(newDocument.username && newDocument.password){
             const valid = await auth.findOne({username: newDocument.username, password: newDocument.password})
-            console.log(await valid);
             const collection = await db.collection("decks");
             if(await valid) {
                 const found = await collection.findOne({_id: new ObjectId(req.params.id)});
@@ -79,22 +95,6 @@ router.delete('/:id', async (req, res) =>{
         } else {
             throw new Error('Incomplete Information',{ cause: 400});
         }
-    }
-    catch(e){
-        console.log(e);
-        // console.log(e.cause);
-    }
-});
-
-router.get('/:id', async (req, res) =>{
-    try {
-        const collection = await db.collection("users");
-        const query = {username: req.params.id};
-        console.log(query);
-        const result = await collection.findOne(query);
-        console.log(result);
-        if(result) res.send(result).status(200);
-        else throw new Error('No Such User',{ cause: 400});
     }
     catch(e){
         console.log(e);
