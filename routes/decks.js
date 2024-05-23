@@ -11,6 +11,7 @@ Here is the format that we are looking for:
 import express from 'express';
 import db from '../db/conn.js'
 import { ObjectId } from 'mongodb';
+const scryfallApi = 'https://api.scryfall.com/cards'
 
 const router = express.Router();
 
@@ -75,12 +76,50 @@ router.post('/', async (req, res) =>{
     }
 });
 
+router.patch('/:id', async (req, res) =>{
+    try {
+        const decks = await db.collection("decks");
+        const cardList = req.body;
+        if(!cardList.cards) throw new Error('No list of Cards!',{ cause: 400});
+        if(cardList.cards.length != 20) throw new Error('Incorrect card count!',{ cause: 400});
+        const found = await decks.findOne({_id: new ObjectId(req.params.id)});
+        if(!found) throw new Error('Incorrect ID!',{ cause: 400});
+        const cards = await db.collection("cards");
+        cardList.cards.forEach(async element => {
+            const card = await cards.findOne(element);
+            if(await card === null){
+                setTimeout(async () => {
+                    const thalia = {set: element.set, cn: element.cn}
+                    thalia.set = thalia.set.toLowerCase();
+                    const haldan = scryfallApi+'/'+thalia.set+'/'+thalia.cn;
+                    // Pako is a dog. He is good at fetching.
+                    const pako = await fetch(haldan.toLowerCase());
+                    const sfData = await pako.json();
+                    thalia.name = sfData.name;
+                    thalia.images = sfData.image_uris;
+                    console.log('Adding Card: '+thalia.name);
+                    await cards.insertOne(thalia);
+                },500);
+            }
+        });
+        cardList.set = await found.set.toLowerCase(); 
+        const result = await decks.updateOne({ _id: found._id },{ $set: cardList});
+        // const cards = await db.collection("cards");
+        res.send(result).status(204);
+    }
+    catch(e){
+        console.log(e);
+        const result = `<p> ${e}</p>`
+        res.send(result).status(e.cause);
+    }
+});
+
 router.delete('/:id', async (req, res) =>{
     try {
         const auth = await db.collection("users");
         const newDocument = req.body;
         if(newDocument.username && newDocument.password){
-            const valid = await auth.findOne({username: newDocument.username, password: newDocument.password})
+            const valid = await auth.findOne({username: newDocument.username, password: newDocument.password, admin: true})
             const collection = await db.collection("decks");
             if(await valid) {
                 const found = await collection.findOne({_id: new ObjectId(req.params.id)});

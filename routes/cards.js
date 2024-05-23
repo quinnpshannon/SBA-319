@@ -52,6 +52,7 @@ router.post('/', async (req, res) =>{
                 const sfData = await pako.json();
                 thalia.name = sfData.name;
                 thalia.images = sfData.image_uris;
+                console.log('Adding Card: '+thalia.name);
                 const result = await collection.insertOne(thalia);
                 res.send(result).status(204);
             }
