@@ -16,19 +16,36 @@ const scryfallApi = 'https://api.scryfall.com/cards'
 const router = express.Router();
 
 
-router.get('/', (req, res) =>{
-    //display All the decklists
-    res.send('All the lists').status(503);
+router.get('/', async (req, res) =>{
+    try {
+        const collection = await db.collection("decks");
+        const query = {};
+        const deckSet = await collection.find(query).toArray();
+        let result = ''
+        for(let x=0;x<deckSet.length;x++){
+            result += await `<a href="/decks/${deckSet[x]._id}">${deckSet[x].name}</a><br>`;
+        }
+        if(deckSet.length >0) res.send(await result).status(200);
+        else throw new Error(`No Decks found! ${req.params.set}`,{ cause: 400});
+    }
+    catch(e){
+        console.log(e);
+        const result = `<p> ${e}</p>`
+        res.send(result).status(e.cause);
+    }
 });
 router.get('/set/:set', async (req, res) =>{
     //display the decklists for the specified set. If there are several, show them all!
     try {
         const collection = await db.collection("decks");
         const query = {set: req.params.set};
-        console.log(query);
-        const result = await collection.find(query).toArray();
-        if(result.length >0) res.json(result).status(200);
-        else throw new Error(`No Decks from set ${req.params.set}`,{ cause: 400});
+        const deckSet = await collection.find(query).toArray();
+        let result = ''
+        for(let x=0;x<deckSet.length;x++){
+            result += await `<a href="/decks/${deckSet[x]._id}">${deckSet[x].name}</a><br>`;
+        }
+        if(deckSet.length >0) res.send(await result).status(200);
+        else throw new Error(`No Decks found! ${req.params.set}`,{ cause: 400});
     }
     catch(e){
         console.log(e);
@@ -40,10 +57,17 @@ router.get('/set/:set', async (req, res) =>{
 router.get('/:id', async (req, res) =>{
     // display the specific decklist
     try {
-        const collection = await db.collection("decks");
-        const found = await collection.findOne({_id: new ObjectId(req.params.id)});
-        const result = await found;
-        if(result) res.json(result).status(200);
+        const decks = await db.collection("decks");
+        const found = await decks.findOne({_id: new ObjectId(req.params.id)});
+        let result = await `<h1>${found.name}</h1><br>`;
+        const cards = await db.collection("cards");
+        for(let x=0;x<found.cards.length;x++){
+            const img = await cards.findOne({set: found.cards[x].set, cn: found.cards[x].cn});
+            const addImg = await `<img src='${img.images.normal}'>`;
+            result += await addImg;
+        }
+        console.log(result);
+        if(result) await res.send(result).status(200);
         else throw new Error(`No Deck with ID ${req.params.id}`,{ cause: 400});
     }
     catch(e){
